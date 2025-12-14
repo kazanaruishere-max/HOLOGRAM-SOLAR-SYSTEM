@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR Solar System Hologram</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-content">
+            <div class="planet-loader"></div>
+            <h1>Initializing AR Solar System</h1>
+            <p>Please allow camera access when prompted</p>
+            <div class="loading-bar">
+                <div class="loading-progress"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div id="app-container" class="app-container hidden">
+        <!-- Three.js Canvas -->
+        <!-- Three.js Canvas -->
+        <canvas id="three-canvas" class="three-canvas"></canvas>
+        
+        <!-- AR Overlay Layer -->
+        <div id="ar-overlay" class="ar-overlay">
+            <!-- Hand Cursor -->
+            <div id="hand-cursor" class="hand-cursor hidden">
+                <div class="cursor-inner"></div>
+                <div class="cursor-ring"></div>
+            </div>
+            <!-- Planet Dots will be injected here via JS -->
+        </div>
+        
+        <!-- Camera Preview Window (Bottom Right) -->
+        <div id="camera-preview" class="camera-preview">
+            <div class="preview-header">
+                <span>Camera Preview</span>
+            </div>
+            <canvas id="camera-preview-canvas" class="camera-preview-canvas"></canvas>
+            <canvas id="hand-preview-overlay" class="hand-preview-overlay"></canvas>
+        </div>
+
+        <!-- UI Panels -->
+        <div class="ui-panel top-left">
+            <div class="panel-content">
+                <h3>Performance</h3>
+                <div class="stat">
+                    <span class="stat-label">FPS:</span>
+                    <span id="fps-counter" class="stat-value">--</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Latency:</span>
+                    <span id="latency-counter" class="stat-value">--</span>ms
+                </div>
+            </div>
+        </div>
+
+        <div class="ui-panel top-right">
+            <div class="panel-content">
+                <h3>Current Gesture</h3>
+                <div id="gesture-indicator" class="gesture-indicator">
+                    <span id="gesture-name">None</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="ui-panel bottom-left">
+            <div class="panel-content">
+                <h3>Controls</h3>
+                <div class="control-buttons">
+                    <button id="pause-btn" class="control-btn">⏸ Pause</button>
+                    <button id="reset-btn" class="control-btn">🔄 Reset</button>
+                    <button id="scale-mode-btn" class="control-btn">📏 Scale Mode</button>
+                    <div class="fps-selector">
+                        <label for="fps-select">Target FPS:</label>
+                        <select id="fps-select" class="fps-select">
+                            <option value="30">30 FPS</option>
+                            <option value="60" selected>60 FPS</option>
+                            <option value="120">120 FPS</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Planet Info Modal -->
+        <div id="planet-modal" class="modal hidden">
+            <div class="modal-content">
+                <span class="close-modal">&times;</span>
+                <h2 id="planet-name">Planet Name</h2>
+                <div class="planet-info">
+                    <div class="info-row">
+                        <span class="info-label">Distance from Sun:</span>
+                        <span id="planet-distance" class="info-value">--</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Diameter:</span>
+                        <span id="planet-diameter" class="info-value">--</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Orbital Period:</span>
+                        <span id="planet-period" class="info-value">--</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tutorial Overlay -->
+        <div id="tutorial-overlay" class="tutorial-overlay hidden">
+            <div class="tutorial-content">
+                <h2>Hand Gesture Controls</h2>
+                <div class="tutorial-item">
+                    <span class="tutorial-gesture">👌</span>
+                    <span>Pinch: Zoom in/out</span>
+                </div>
+                <div class="tutorial-item">
+                    <span class="tutorial-gesture">👋</span>
+                    <span>Open Palm: Rotate solar system</span>
+                </div>
+                <div class="tutorial-item">
+                    <span class="tutorial-gesture">👆</span>
+                    <span>Point: Select planet</span>
+                </div>
+                <div class="tutorial-item">
+                    <span class="tutorial-gesture">✌️</span>
+                    <span>Two Fingers: Pan view</span>
+                </div>
+                <button id="close-tutorial" class="control-btn">Got it!</button>
+            </div>
+        </div>
+
+        <!-- Error Message -->
+        <div id="error-message" class="error-message hidden">
+            <div class="error-content">
+                <h3>⚠️ Error</h3>
+                <p id="error-text"></p>
+                <button id="retry-btn" class="control-btn">Retry</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+    <script>
+        // OrbitControls fallback if CDN fails
+        if (typeof THREE !== 'undefined' && !THREE.OrbitControls) {
+            THREE.OrbitControls = function(camera, domElement) {
+                this.camera = camera;
+                this.domElement = domElement;
+                this.enableDamping = true;
+                this.dampingFactor = 0.05;
+                this.minDistance = 5;
+                this.maxDistance = 100;
+                this.target = new THREE.Vector3();
+                this.update = function() {};
+                this.reset = function() {
+                    this.camera.position.set(0, 0, 30);
+                    this.target.set(0, 0, 0);
+                };
+            };
+        }
+    </script>
+    <script src="js/main.js"></script>
+    <script src="js/solar-system.js"></script>
+    <script src="js/gesture-controller.js"></script>
+    <script src="js/camera-overlay.js"></script>
+    <script src="js/ar-overlay.js"></script>
+</body>
+</html>
+
